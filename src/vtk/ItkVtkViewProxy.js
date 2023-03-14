@@ -238,6 +238,32 @@ function ItkVtkViewProxy(publicAPI, model) {
         model.lastPickedValues = null
       }
     } else {
+      publicAPI.setCornerAnnotation('se', model.seCornerAnnotation)
+
+      const pickedPositions = model.annotationPicker.getPickedPositions()
+      var pickedX = 'N/A&nbsp;'
+      var pickedY = 'N/A&nbsp;'
+      var pickedZ = 'N/A&nbsp;'
+      
+      if (!!pickedPositions) {
+        pickedX = Math.round(pickedPositions[0][0] * 100) / 100
+        pickedY = Math.round(pickedPositions[0][1] * 100) / 100
+        pickedZ = 0
+      } 
+
+      publicAPI.updateCornerAnnotation({
+        iIndex: Math.round(renderPosition.x * 100) / 100,
+        jIndex: Math.round(renderPosition.y * 100) / 100,
+        kIndex: Math.round(renderPosition.z * 100) / 100,
+        xPosition: pickedX,
+        yPosition: pickedY,
+        zPosition: pickedZ,
+        value: 'N/A&nbsp;',
+        annotation: 'N/A&nbsp;',
+        annotationLabelStyle: '',
+      })
+      publicAPI.setAnnotationOpacity(1.0)
+
       model.lastPickedValues = null
     }
   }
@@ -371,7 +397,7 @@ function ItkVtkViewProxy(publicAPI, model) {
   })
   publicAPI.setAnnotationOpacity(0.0)
   model.annotationPicker = vtkPointPicker.newInstance()
-  model.annotationPicker.setPickFromList(1)
+  model.annotationPicker.setPickFromList(0)
   model.annotationPicker.initializePickList()
   model.interactor.onLeftButtonPress(event => {
     if (model.clickCallback && model.lastPickedValues) {
