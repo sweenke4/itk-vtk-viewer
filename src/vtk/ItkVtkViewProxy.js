@@ -245,7 +245,7 @@ function ItkVtkViewProxy(publicAPI, model) {
       var pickedY = 'N/A&nbsp;'
       var pickedZ = 'N/A&nbsp;'
       
-      if (!!pickedPositions) {
+      if (!!pickedPositions.length) {
         pickedX = Math.round(pickedPositions[0][0] * 100) / 100
         pickedY = Math.round(pickedPositions[0][1] * 100) / 100
         pickedZ = 0
@@ -258,7 +258,7 @@ function ItkVtkViewProxy(publicAPI, model) {
         xPosition: pickedX,
         yPosition: pickedY,
         zPosition: pickedZ,
-        value: 'N/A&nbsp;',
+        value: Math.round(model.annotationPicker.getPointId()/50),
         annotation: 'N/A&nbsp;',
         annotationLabelStyle: '',
       })
