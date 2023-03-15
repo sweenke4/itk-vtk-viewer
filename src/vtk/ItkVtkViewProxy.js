@@ -15,6 +15,9 @@ import vtkWidgetManager from 'vtk.js/Sources/Widgets/Core/WidgetManager'
 const CursorCornerAnnotation =
   '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;">Index:</td><td>${iIndex},</td><td>${jIndex},</td><td>${kIndex}</td></tr><tr><td style="margin-left: auto; margin-right: 0;">Position:</td><td>${xPosition},</td><td>${yPosition},</td><td>${zPosition}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Value:</td><td style="text-align:center;" colspan="3">${value}</td></tr><tr ${annotationLabelStyle}><td style="margin-left: auto; margin-right: 0;">Label:</td><td style="text-align:center;" colspan="3">${annotation}</td></tr></table>'
 
+const CursorCornerAnnotationPointID =
+  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr></table>'
+
 const { vtkErrorMacro } = macro
 
 function numberToText(number, precision) {
@@ -238,29 +241,10 @@ function ItkVtkViewProxy(publicAPI, model) {
         model.lastPickedValues = null
       }
     } else {
-      publicAPI.setCornerAnnotation('se', model.seCornerAnnotation)
-
-      const pickedPositions = model.annotationPicker.getPickedPositions()
-      var pickedX = 'N/A&nbsp;'
-      var pickedY = 'N/A&nbsp;'
-      var pickedZ = 'N/A&nbsp;'
-      
-      if (!!pickedPositions.length) {
-        pickedX = Math.round(pickedPositions[0][0] * 100) / 100
-        pickedY = Math.round(pickedPositions[0][1] * 100) / 100
-        pickedZ = 0
-      } 
+      publicAPI.setCornerAnnotation('se', CursorCornerAnnotationPointID)
 
       publicAPI.updateCornerAnnotation({
-        iIndex: Math.round(renderPosition.x * 100) / 100,
-        jIndex: Math.round(renderPosition.y * 100) / 100,
-        kIndex: Math.round(renderPosition.z * 100) / 100,
-        xPosition: pickedX,
-        yPosition: pickedY,
-        zPosition: pickedZ,
-        value: Math.round(model.annotationPicker.getPointId()/50),
-        annotation: 'N/A&nbsp;',
-        annotationLabelStyle: '',
+        pointID: Math.round(model.annotationPicker.getPointId()/50),
       })
       publicAPI.setAnnotationOpacity(1.0)
 
