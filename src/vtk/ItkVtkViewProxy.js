@@ -16,7 +16,7 @@ const CursorCornerAnnotation =
   '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;">Index:</td><td>${iIndex},</td><td>${jIndex},</td><td>${kIndex}</td></tr><tr><td style="margin-left: auto; margin-right: 0;">Position:</td><td>${xPosition},</td><td>${yPosition},</td><td>${zPosition}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Value:</td><td style="text-align:center;" colspan="3">${value}</td></tr><tr ${annotationLabelStyle}><td style="margin-left: auto; margin-right: 0;">Label:</td><td style="text-align:center;" colspan="3">${annotation}</td></tr></table>'
 
 const CursorCornerAnnotationPointID =
-  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr></table>'
+  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Orig Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${orig}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Hover Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Clicked Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${selected}</td></tr></table>'
 
 const { vtkErrorMacro } = macro
 
@@ -240,14 +240,16 @@ function ItkVtkViewProxy(publicAPI, model) {
         model.dataProbeFrameActor.setVisibility(false)
         model.lastPickedValues = null
       }
-    } else {
+    } else if (model.pointRepresentation) {
       publicAPI.setCornerAnnotation('se', CursorCornerAnnotationPointID)
 
       publicAPI.updateCornerAnnotation({
-        pointID: Math.round(model.annotationPicker.getPointId()/50),
+        orig: model.annotationPicker.getPointId(),
+        pointID: Math.floor(model.annotationPicker.getPointId()/50),
+        selected: model.selectedId,
       })
-      publicAPI.setAnnotationOpacity(1.0)
 
+    } else {
       model.lastPickedValues = null
     }
   }
@@ -381,9 +383,15 @@ function ItkVtkViewProxy(publicAPI, model) {
   })
   publicAPI.setAnnotationOpacity(0.0)
   model.annotationPicker = vtkPointPicker.newInstance()
-  model.annotationPicker.setPickFromList(0)
+  model.annotationPicker.setPickFromList(1)
   model.annotationPicker.initializePickList()
   model.interactor.onLeftButtonPress(event => {
+
+    // Save the ID of the selected point
+    if (model.annotationPicker.getPointId() != -1) {
+        model.selectedId = Math.floor(model.annotationPicker.getPointId()/50)
+    }
+
     if (model.clickCallback && model.lastPickedValues) {
       model.clickCallback(model.lastPickedValues)
     }
@@ -829,6 +837,11 @@ function ItkVtkViewProxy(publicAPI, model) {
       const isVolumeRepresentation = !!rep.getVolumes().length
       return isVolumeRepresentation
     })
+    const pointRepresentations = model.representations.filter(rep => {
+      const isNotVolumeRepresentation = !!!rep.getVolumes().length
+      return isNotVolumeRepresentation
+    })
+
     if (volumeRepresentations[0]) {
       model.volumeRepresentation = volumeRepresentations[0]
       const volume = model.volumeRepresentation.getVolumes()[0]
@@ -841,6 +854,15 @@ function ItkVtkViewProxy(publicAPI, model) {
         .getActors()
         .forEach(model.annotationPicker.addPickList)
       updateDataProbeSize()
+      publicAPI.setAnnotationOpacity(1.0)
+
+    } else if (pointRepresentations[0]) {
+      console.log("In pointRepresentations[0]")
+      model.pointRepresentation = pointRepresentations[0]
+      model.pointRepresentation
+        .getActors()
+        .forEach(model.annotationPicker.addPickList)
+
       publicAPI.setAnnotationOpacity(1.0)
     }
 
@@ -939,6 +961,7 @@ const DEFAULT_VALUES = {
     label: null,
   },
   enableAxes: false,
+  selectedId: null,
 }
 
 // ----------------------------------------------------------------------------
