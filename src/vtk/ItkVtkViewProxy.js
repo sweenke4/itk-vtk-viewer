@@ -16,7 +16,7 @@ const CursorCornerAnnotation =
   '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;">Index:</td><td>${iIndex},</td><td>${jIndex},</td><td>${kIndex}</td></tr><tr><td style="margin-left: auto; margin-right: 0;">Position:</td><td>${xPosition},</td><td>${yPosition},</td><td>${zPosition}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Value:</td><td style="text-align:center;" colspan="3">${value}</td></tr><tr ${annotationLabelStyle}><td style="margin-left: auto; margin-right: 0;">Label:</td><td style="text-align:center;" colspan="3">${annotation}</td></tr></table>'
 
 const CursorCornerAnnotationPointID =
-  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Orig Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${orig}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Hover Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Clicked Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${selected}</td></tr></table>'
+  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">(Selected):&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${selected}</td></tr></table>'
 
 const { vtkErrorMacro } = macro
 
@@ -244,7 +244,6 @@ function ItkVtkViewProxy(publicAPI, model) {
       publicAPI.setCornerAnnotation('se', CursorCornerAnnotationPointID)
 
       publicAPI.updateCornerAnnotation({
-        orig: model.annotationPicker.getPointId(),
         pointID: Math.floor(model.annotationPicker.getPointId()/50),
         selected: model.selectedId,
       })
@@ -842,6 +841,8 @@ function ItkVtkViewProxy(publicAPI, model) {
       return isNotVolumeRepresentation
     })
 
+    var pointRepresentationsLength = pointRepresentations.length
+
     if (volumeRepresentations[0]) {
       model.volumeRepresentation = volumeRepresentations[0]
       const volume = model.volumeRepresentation.getVolumes()[0]
@@ -856,9 +857,9 @@ function ItkVtkViewProxy(publicAPI, model) {
       updateDataProbeSize()
       publicAPI.setAnnotationOpacity(1.0)
 
-    } else if (pointRepresentations[0]) {
-      console.log("In pointRepresentations[0]")
-      model.pointRepresentation = pointRepresentations[0]
+    } else if (!!pointRepresentationsLength) {
+      // KTS 16 Mar 2023: We want the glyph actor, which will be the last geometry added within the latent explorer tool
+      model.pointRepresentation = pointRepresentations[pointRepresentationsLength -1]
       model.pointRepresentation
         .getActors()
         .forEach(model.annotationPicker.addPickList)
