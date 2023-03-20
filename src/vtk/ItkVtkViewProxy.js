@@ -15,6 +15,7 @@ import vtkWidgetManager from 'vtk.js/Sources/Widgets/Core/WidgetManager'
 const CursorCornerAnnotation =
   '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;">Index:</td><td>${iIndex},</td><td>${jIndex},</td><td>${kIndex}</td></tr><tr><td style="margin-left: auto; margin-right: 0;">Position:</td><td>${xPosition},</td><td>${yPosition},</td><td>${zPosition}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">Value:</td><td style="text-align:center;" colspan="3">${value}</td></tr><tr ${annotationLabelStyle}><td style="margin-left: auto; margin-right: 0;">Label:</td><td style="text-align:center;" colspan="3">${annotation}</td></tr></table>'
 
+// KTS: 20th March 2023: New Annotation for Point ID information
 const CursorCornerAnnotationPointID =
   '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">(Selected):&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${selected}</td></tr></table>'
 
@@ -240,9 +241,12 @@ function ItkVtkViewProxy(publicAPI, model) {
         model.dataProbeFrameActor.setVisibility(false)
         model.lastPickedValues = null
       }
+    // KTS: 20th March 2023: If the data is in the form of points / glyphs then show the point ID annotation
     } else if (model.pointRepresentation) {
       publicAPI.setCornerAnnotation('se', CursorCornerAnnotationPointID)
-
+      
+      // KTS: 20th March 2023: Glyphs are represented by 50 data points so to get the point ID for the selected
+      // data point we need to divide the pointID value by 50
       publicAPI.updateCornerAnnotation({
         pointID: Math.floor(model.annotationPicker.getPointId()/50),
         selected: model.selectedId,
@@ -386,7 +390,7 @@ function ItkVtkViewProxy(publicAPI, model) {
   model.annotationPicker.initializePickList()
   model.interactor.onLeftButtonPress(event => {
 
-    // Save the ID of the selected point
+    // KTS: 20th March 2023: Save the ID of the selected point
     if (model.annotationPicker.getPointId() != -1) {
         model.selectedId = Math.floor(model.annotationPicker.getPointId()/50)
     }
@@ -836,11 +840,12 @@ function ItkVtkViewProxy(publicAPI, model) {
       const isVolumeRepresentation = !!rep.getVolumes().length
       return isVolumeRepresentation
     })
+    // KTS: 20th March 2023: Filter out the representations to only select the non-volume
     const pointRepresentations = model.representations.filter(rep => {
       const isNotVolumeRepresentation = !!!rep.getVolumes().length
       return isNotVolumeRepresentation
     })
-
+    // KTS: 20th March 2023: Determine the number of non-volume representations
     var pointRepresentationsLength = pointRepresentations.length
 
     if (volumeRepresentations[0]) {
@@ -962,7 +967,7 @@ const DEFAULT_VALUES = {
     label: null,
   },
   enableAxes: false,
-  selectedId: null,
+  selectedId: null,   // KTS: 20th March 2023: Added to store the selected (clicked) Point ID information
 }
 
 // ----------------------------------------------------------------------------
