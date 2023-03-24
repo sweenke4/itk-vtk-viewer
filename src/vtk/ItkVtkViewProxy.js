@@ -257,6 +257,22 @@ function ItkVtkViewProxy(publicAPI, model) {
     }
   }
 
+  async function sendRequest(selectedId) {
+    try {
+      const data = { pointID: selectedId };
+      
+      const response = await fetch("http://localhost:5000/selected_pointID", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+      });
+    } catch (error) {
+        responseElement.textContent = "Error: " + error.message;
+    }
+  }
+
   function updateAxes() {
     model.axesBoundingBox.reset()
     model.representations.forEach(representation => {
@@ -393,6 +409,8 @@ function ItkVtkViewProxy(publicAPI, model) {
     // KTS: 20th March 2023: Save the ID of the selected point
     if (model.annotationPicker.getPointId() != -1) {
         model.selectedId = Math.floor(model.annotationPicker.getPointId()/50)
+
+        sendRequest(model.selectedId)
     }
 
     if (model.clickCallback && model.lastPickedValues) {
