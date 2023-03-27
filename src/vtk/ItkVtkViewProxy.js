@@ -257,19 +257,40 @@ function ItkVtkViewProxy(publicAPI, model) {
     }
   }
 
-  async function sendRequest(selectedId) {
-    try {
-      const data = { pointID: selectedId };
-      
-      const response = await fetch("http://localhost:5000/selected_pointID", {
-          method: "POST",
-          headers: {
-              "Content-Type": "application/json"
-          },
-          body: JSON.stringify(data)
-      });
-    } catch (error) {
-        responseElement.textContent = "Error: " + error.message;
+  // KTS 27th March 2023: Send data to Python flask app
+  async function sendRequest(type, ip) {
+
+    // Sending clicked position
+    if (type == 'pos'){
+      try {
+        const data = { pos: ip };
+        console.log(data)
+        
+        const response = await fetch("http://localhost:5000/selected_position", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+      } catch (error) {
+          responseElement.textContent = "Error: " + error.message;
+      }
+    // Sending the clicked point ID
+    } else if (type = 'point_id'){
+      try {
+        const data = { pointID: ip };
+        
+        const response = await fetch("http://localhost:5000/selected_pointID", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+      } catch (error) {
+          responseElement.textContent = "Error: " + error.message;
+      }
     }
   }
 
@@ -406,11 +427,16 @@ function ItkVtkViewProxy(publicAPI, model) {
   model.annotationPicker.initializePickList()
   model.interactor.onLeftButtonPress(event => {
 
+    if (model.shiftKey && model.altKey){
+      const pos = model.annotationPicker.getPickedPositions()
+
+      sendRequest('pos', pos)
+    }
     // KTS: 20th March 2023: Save the ID of the selected point
-    if (model.annotationPicker.getPointId() != -1) {
+    else if (!model.shiftKey && !model.altKey && model.annotationPicker.getPointId() != -1) {
         model.selectedId = Math.floor(model.annotationPicker.getPointId()/50)
 
-        sendRequest(model.selectedId)
+        sendRequest('point_id', model.selectedId)
     }
 
     if (model.clickCallback && model.lastPickedValues) {
@@ -432,6 +458,25 @@ function ItkVtkViewProxy(publicAPI, model) {
   })
   model.interactor.onEndMouseWheel(event => {
     updateDataProbeSize()
+  })
+  // KTS 27th March 2023: Detect and save specific Key down events
+  model.interactor.onKeyDown(event => {
+    if(event.shiftKey){
+      model.shiftKey = true
+    }
+    if(event.altKey){ // option button on Mac
+      model.altKey = true
+    }
+    
+  })
+  // KTS 27th March 2023: Detect and save specific Key Up events
+  model.interactor.onKeyUp(event => {
+    if(!event.shiftKey){
+      model.shiftKey = false
+    }
+    if(!event.altKey){
+      model.altKey = false
+    }
   })
 
   // use the same color map in the planes
@@ -986,6 +1031,8 @@ const DEFAULT_VALUES = {
   },
   enableAxes: false,
   selectedId: null,   // KTS: 20th March 2023: Added to store the selected (clicked) Point ID information
+  shiftKey: false,    // KTS 27 March 2023: Specifies if the Shift button is pressed or not
+  altKey: false       // KTS 27 March 2023: Specifies if the Alt button (option in Mac) is pressed or not
 }
 
 // ----------------------------------------------------------------------------
