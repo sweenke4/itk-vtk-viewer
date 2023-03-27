@@ -428,7 +428,12 @@ function ItkVtkViewProxy(publicAPI, model) {
   model.interactor.onLeftButtonPress(event => {
 
     if (model.shiftKey && model.altKey){
-      const pos = model.annotationPicker.getPickedPositions()
+      let pos = model.annotationPicker.getPickedPositions()
+
+      // Send a -1 to signify nothing found
+      if (pos.length == 0) {
+        pos = [Array(3).fill(0)]
+      }
 
       sendRequest('pos', pos)
     }
