@@ -17,7 +17,7 @@ const CursorCornerAnnotation =
 
 // KTS: 20th March 2023: New Annotation for Point ID information
 const CursorCornerAnnotationPointID =
-  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr><tr><td style="margin-left: auto; margin-right: 0;"">(Selected):&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${selected}</td></tr></table>'
+  '<table class="corner-annotation" style="margin-left: 0;"><tr><td style="margin-left: auto; margin-right: 0;"">Point ID:&nbsp;&nbsp;</td><td style="text-align:center;" colspan="3">${pointID}</td></tr></table>'
 
 const { vtkErrorMacro } = macro
 
@@ -248,8 +248,7 @@ function ItkVtkViewProxy(publicAPI, model) {
       // KTS: 20th March 2023: Glyphs are represented by 50 data points so to get the point ID for the selected
       // data point we need to divide the pointID value by 50
       publicAPI.updateCornerAnnotation({
-        pointID: Math.floor(model.annotationPicker.getPointId()/50),
-        selected: model.selectedId,
+        pointID: Math.floor(model.annotationPicker.getPointId()/50)
       })
 
     } else {
