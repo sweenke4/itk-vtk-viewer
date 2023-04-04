@@ -257,39 +257,43 @@ function ItkVtkViewProxy(publicAPI, model) {
   }
 
   // KTS 27th March 2023: Send data to Python flask app
-  async function sendRequest(type, ip) {
+  async function sendRequest(request_type, ip) {
 
-    // Sending clicked position
-    if (type == 'pos'){
-      try {
-        const data = { pos: ip };
-        console.log(data)
-        
-        const response = await fetch("http://localhost:5000/selected_position", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        });
-      } catch (error) {
-          responseElement.textContent = "Error: " + error.message;
-      }
-    // Sending the clicked point ID
-    } else if (type = 'point_id'){
-      try {
-        const data = { pointID: ip };
-        
-        const response = await fetch("http://localhost:5000/selected_pointID", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        });
-      } catch (error) {
-          responseElement.textContent = "Error: " + error.message;
-      }
+    let data
+    let url
+
+    // Sending data to Flask app
+    switch (request_type){
+      case 'pos':
+        data = { pos: ip };
+        url = "http://localhost:5000/selected_position";
+        break;
+      case 'point_id':
+        data = { pointID: ip };
+        url = "http://localhost:5000/selected_pointID";
+        break;
+      case 'pos_click_drag_start':
+        data = { pos_click_drag_start: ip };
+        url = "http://localhost:5000/selected_position_start";
+        break;
+      case 'pos_click_drag_end':
+        data = { pos_click_drag_end: ip };
+        url = "http://localhost:5000/selected_position_end";
+        break;
+      default:
+        return;
+    }
+    
+    try {      
+      const response = await fetch(url, {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+      });
+    } catch (error) {
+        responseElement.textContent = "Error: " + error.message;
     }
   }
 
@@ -406,6 +410,23 @@ function ItkVtkViewProxy(publicAPI, model) {
     model.axesZHandle.setText(model.axesZVText)
   }
 
+  // KTS 4th Apr 2023: Get the position of selection
+  function getPickedPositions(event){
+    const pos = event.position;
+    const point = [pos.x, pos.y, 0.0];    
+    model.annotationPicker.pick(point, model.renderer);
+    let pickedPoint
+
+    if (model.annotationPicker.getActors().length === 0) {
+      pickedPoint = model.annotationPicker.getPickPosition();
+    } else {
+      const pickedPoints = model.annotationPicker.getPickedPositions();
+      pickedPoint = pickedPoints[0];
+    }
+
+    return pickedPoint
+  }
+
   // Setup --------------------------------------------------------------------
 
   publicAPI.setCornerAnnotation('se', '')
@@ -426,15 +447,12 @@ function ItkVtkViewProxy(publicAPI, model) {
   model.annotationPicker.initializePickList()
   model.interactor.onLeftButtonPress(event => {
 
-    if (model.shiftKey && model.altKey){
-      let pos = model.annotationPicker.getPickedPositions()
+    // KTS 4th Apr 2023: When user holds Alt (or option in Mac) and clicks
+    // Start of a click and drag to select area
+    if (model.altKey){
+      const pickedPoint = getPickedPositions(event)
 
-      // Send a -1 to signify nothing found
-      if (pos.length == 0) {
-        pos = [Array(3).fill(0)]
-      }
-
-      sendRequest('pos', pos)
+      sendRequest('pos_click_drag_start', pickedPoint)
     }
     // KTS: 20th March 2023: Save the ID of the selected point
     else if (!model.shiftKey && !model.altKey && model.annotationPicker.getPointId() != -1) {
@@ -446,6 +464,23 @@ function ItkVtkViewProxy(publicAPI, model) {
     if (model.clickCallback && model.lastPickedValues) {
       model.clickCallback(model.lastPickedValues)
     }
+  })
+  model.interactor.onLeftButtonRelease(event => {
+    // KTS 4th Apr 2023: When user holds Alt (or option in Mac) and releases click
+    // End of a click and drag to select area
+    if (model.altKey){
+      const pickedPoint = getPickedPositions(event)
+
+      sendRequest('pos_click_drag_end', pickedPoint)
+    }
+  })
+  // KTS 4th Apr 2023: Send position on right button press
+  model.interactor.onRightButtonPress(event => {
+
+    const pickedPoint = getPickedPositions(event)
+
+    sendRequest('pos', pickedPoint)
+
   })
   model.interactor.onMouseMove(event => {
     updateAnnotations(event)
