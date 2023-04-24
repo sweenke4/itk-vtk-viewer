@@ -799,9 +799,11 @@ const createViewer = (
     )
 
     publicAPI.setViewMode = mode => {
-      if (!image) {
-        return
-      }
+      
+      // KTS: 20th April 2023: Was only allowing for the change to view using viewer.mode = 'z' for views that used images.
+      // if (!image) {
+      //   return
+      // }
       store.mainUI.viewMode = mode
     }
 
