@@ -262,22 +262,28 @@ function ItkVtkViewProxy(publicAPI, model) {
     let data
     let url
 
+    let xrange = getDataXRange()
+
     // Sending data to Flask app
     switch (request_type){
       case 'pos':
-        data = { pos: ip };
+        data = { pos: ip,
+                 xrange: xrange };
         url = "http://localhost:5000/selected_position";
         break;
       case 'point_id':
-        data = { pointID: ip };
+        data = { pointID: ip,
+                 xrange: xrange };
         url = "http://localhost:5000/selected_pointID";
         break;
       case 'pos_click_drag_start':
-        data = { pos_click_drag_start: ip };
+        data = { pos_click_drag_start: ip,
+                 xrange: xrange };
         url = "http://localhost:5000/selected_position_start";
         break;
       case 'pos_click_drag_end':
-        data = { pos_click_drag_end: ip };
+        data = { pos_click_drag_end: ip,
+                 xrange: xrange };
         url = "http://localhost:5000/selected_position_end";
         break;
       default:
@@ -295,6 +301,16 @@ function ItkVtkViewProxy(publicAPI, model) {
     } catch (error) {
         responseElement.textContent = "Error: " + error.message;
     }
+  }
+
+  // KTS 24th April 2023: Get the range of the data in the X direction
+  // Used to ensure that the updates are only made to the correct vtk panel
+  function getDataXRange() {
+
+    let last_actor = model.renderer.getActors().length -1
+    let xrange = model.renderer.getActors()[last_actor].getXRange()
+
+    return xrange
   }
 
   function updateAxes() {
@@ -410,7 +426,7 @@ function ItkVtkViewProxy(publicAPI, model) {
     model.axesZHandle.setText(model.axesZVText)
   }
 
-  // KTS 4th Apr 2023: Get the position of selection
+  // KTS 4th Apr 2023: Get the position of selection 
   function getPickedPositions(event){
     const pos = event.position;
     const point = [pos.x, pos.y, 0.0];    
@@ -457,7 +473,7 @@ function ItkVtkViewProxy(publicAPI, model) {
     // KTS: 20th March 2023: Save the ID of the selected point
     else if (!model.shiftKey && !model.altKey && model.annotationPicker.getPointId() != -1) {
         model.selectedId = Math.floor(model.annotationPicker.getPointId()/50)
-
+        
         sendRequest('point_id', model.selectedId)
     }
 
@@ -519,7 +535,7 @@ function ItkVtkViewProxy(publicAPI, model) {
   })
 
   // use the same color map in the planes
-  // colormap changes with window / level
+  // color map changes with window / level
   // window / level changes piecewise =jk
 
   model.dataProbeCubeSource = vtkCubeSource.newInstance()
