@@ -256,63 +256,6 @@ function ItkVtkViewProxy(publicAPI, model) {
     }
   }
 
-  // KTS 27th March 2023: Send data to Python flask app
-  async function sendRequest(request_type, ip) {
-
-    let data
-    let url
-
-    let xrange = getDataXRange()
-
-    // Sending data to Flask app
-    switch (request_type){
-      case 'pos':
-        data = { pos: ip,
-                 xrange: xrange };
-        url = "http://localhost:5000/selected_position";
-        break;
-      case 'point_id':
-        data = { pointID: ip,
-                 xrange: xrange };
-        url = "http://localhost:5000/selected_pointID";
-        break;
-      case 'pos_click_drag_start':
-        data = { pos_click_drag_start: ip,
-                 xrange: xrange };
-        url = "http://localhost:5000/selected_position_start";
-        break;
-      case 'pos_click_drag_end':
-        data = { pos_click_drag_end: ip,
-                 xrange: xrange };
-        url = "http://localhost:5000/selected_position_end";
-        break;
-      default:
-        return;
-    }
-    
-    try {      
-      const response = await fetch(url, {
-          method: "POST",
-          headers: {
-              "Content-Type": "application/json"
-          },
-          body: JSON.stringify(data)
-      });
-    } catch (error) {
-        responseElement.textContent = "Error: " + error.message;
-    }
-  }
-
-  // KTS 24th April 2023: Get the range of the data in the X direction
-  // Used to ensure that the updates are only made to the correct vtk panel
-  function getDataXRange() {
-
-    let last_actor = model.renderer.getActors().length -1
-    let xrange = model.renderer.getActors()[last_actor].getXRange()
-
-    return xrange
-  }
-
   function updateAxes() {
     model.axesBoundingBox.reset()
     model.representations.forEach(representation => {
@@ -426,6 +369,63 @@ function ItkVtkViewProxy(publicAPI, model) {
     model.axesZHandle.setText(model.axesZVText)
   }
 
+  // KTS 27th March 2023: Send data to Python flask app
+  async function sendRequest(request_type, ip) {
+
+    let data
+    let url
+
+    let xrange = getDataXRange()
+
+    // Sending data to Flask app
+    switch (request_type){
+      case 'pos':
+        data = { pos: ip,
+                  xrange: xrange };
+        url = "http://localhost:5000/selected_position";
+        break;
+      case 'point_id':
+        data = { pointID: ip,
+                  xrange: xrange };
+        url = "http://localhost:5000/selected_pointID";
+        break;
+      case 'pos_click_drag_start':
+        data = { pos_click_drag_start: ip,
+                  xrange: xrange };
+        url = "http://localhost:5000/selected_position_start";
+        break;
+      case 'pos_click_drag_end':
+        data = { pos_click_drag_end: ip,
+                  xrange: xrange };
+        url = "http://localhost:5000/selected_position_end";
+        break;
+      default:
+        return;
+    }
+    
+    try {      
+      const response = await fetch(url, {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+      });
+    } catch (error) {
+        responseElement.textContent = "Error: " + error.message;
+    }
+  }
+
+  // KTS 24th April 2023: Get the range of the data in the X direction
+  // Used to ensure that the updates are only made to the correct vtk panel
+  function getDataXRange() {
+
+    let last_actor = model.renderer.getActors().length -1
+    let xrange = model.renderer.getActors()[last_actor].getXRange()
+
+    return xrange
+  }
+
   // KTS 4th Apr 2023: Get the position of selection 
   function getPickedPositions(event){
     const pos = event.position;
@@ -442,6 +442,53 @@ function ItkVtkViewProxy(publicAPI, model) {
 
     return pickedPoint
   }
+
+  // KTS 28th Apr 2023: Sets the lengths and center of the cube source
+  function render_select_box() {
+    
+    // Calculate the dimensions and center of the box based on the start and end points
+    const xLength = Math.abs(box_end[0] - box_start[0]);
+    const yLength = Math.abs(box_end[1] - box_start[1]);
+    const zLength = 0; // Set the z-length to 0 for a 2D box
+    const centerX = box_start[0] + (box_end[0] - box_start[0]) / 2;
+    const centerY = box_start[1] + (box_end[1] - box_start[1]) / 2;
+    const centerZ = 0; // Set the z-center to 0 for a 2D box
+
+    // Update the cube source with the new dimensions and center
+    model.cubeSource.setXLength(xLength);
+    model.cubeSource.setYLength(yLength);
+    model.cubeSource.setZLength(zLength);
+    model.cubeSource.setCenter(centerX, centerY, centerZ);
+
+    model.renderWindow.render()
+  }
+
+
+  /* Cube Source --------------------------------------------------------------------
+        KTS 28th Apr 2023
+        Creation of a Cube Source which will be used to show selection when alt (option) button
+        pressed and mouse is used to click and drag over area   */ 
+  
+  let box_start = [0,0,0];
+  let box_end = [0,0,0];
+  model.cubeSource = vtkCubeSource.newInstance();
+  model.cubeSource.setXLength(0);
+  model.cubeSource.setYLength(0);
+  model.cubeSource.setZLength(0);
+  model.cubeSource.setCenter(0, 0, 0);
+
+  model.cubeSourceMapper = vtkMapper.newInstance()
+  model.cubeSourceMapper.setInputConnection(model.cubeSource.getOutputPort())
+  model.cubeSourceActor = vtkActor.newInstance()
+  model.cubeSourceActor.setMapper(model.cubeSourceMapper)
+
+  model.cubeSourceActor.getProperty().setLineWidth(10);
+  model.cubeSourceActor.getProperty().setColor(1, 0, 0);
+  model.cubeSourceActor.getProperty().setOpacity(0.5);
+
+  model.renderer.addActor(model.cubeSourceActor)
+
+  
 
   // Setup --------------------------------------------------------------------
 
@@ -461,6 +508,9 @@ function ItkVtkViewProxy(publicAPI, model) {
   model.annotationPicker = vtkPointPicker.newInstance()
   model.annotationPicker.setPickFromList(1)
   model.annotationPicker.initializePickList()
+  
+  // Button / Mouse events ------------------------------------------------------
+
   model.interactor.onLeftButtonPress(event => {
 
     // KTS 4th Apr 2023: When user holds Alt (or option in Mac) and clicks
@@ -469,6 +519,8 @@ function ItkVtkViewProxy(publicAPI, model) {
       const pickedPoint = getPickedPositions(event)
 
       sendRequest('pos_click_drag_start', pickedPoint)
+      // Set the start position for the selection box
+      box_start = [pickedPoint[0], pickedPoint[1], 0] 
     }
     // KTS: 20th March 2023: Save the ID of the selected point
     else if (!model.shiftKey && !model.altKey && model.annotationPicker.getPointId() != -1) {
@@ -488,6 +540,11 @@ function ItkVtkViewProxy(publicAPI, model) {
       const pickedPoint = getPickedPositions(event)
 
       sendRequest('pos_click_drag_end', pickedPoint)
+
+      // Sets the start and end positions for the cubeSource. Basically make it disappear
+      box_start = [0,0,0]
+      box_end   = [0,0,0]
+      render_select_box()
     }
   })
   // KTS 4th Apr 2023: Send position on right button press
@@ -497,22 +554,6 @@ function ItkVtkViewProxy(publicAPI, model) {
 
     sendRequest('pos', pickedPoint)
 
-  })
-  model.interactor.onMouseMove(event => {
-    updateAnnotations(event)
-  })
-  model.interactor.onStartMouseMove(event => {
-    if (model.viewMode !== 'VolumeRendering' || model.viewPlanes) {
-      publicAPI.getInteractor().requestAnimation('annotationMouseMove')
-    }
-  })
-  model.interactor.onEndMouseMove(event => {
-    if (model.viewMode !== 'VolumeRendering' || model.viewPlanes) {
-      publicAPI.getInteractor().cancelAnimation('annotationMouseMove')
-    }
-  })
-  model.interactor.onEndMouseWheel(event => {
-    updateDataProbeSize()
   })
   // KTS 27th March 2023: Detect and save specific Key down events
   model.interactor.onKeyDown(event => {
@@ -533,6 +574,36 @@ function ItkVtkViewProxy(publicAPI, model) {
       model.altKey = false
     }
   })
+  model.interactor.onMouseMove(event => {
+    updateAnnotations(event)
+
+    /* KTS 28th Apr 2023
+    If the user is holding down the alt (option) key and the start array
+    is not [0,0,0], i.e. they have clicked the start. Then start drawing the selection box */
+    if (model.altKey & !box_start.every((val) => val === 0)){
+    
+      const pickedPoint = getPickedPositions(event)
+      box_end = [pickedPoint[0], pickedPoint[1], 0]
+      render_select_box()
+    }
+  })
+
+
+
+  model.interactor.onStartMouseMove(event => {
+    if (model.viewMode !== 'VolumeRendering' || model.viewPlanes) {
+      publicAPI.getInteractor().requestAnimation('annotationMouseMove')
+    }
+  })
+  model.interactor.onEndMouseMove(event => {
+    if (model.viewMode !== 'VolumeRendering' || model.viewPlanes) {
+      publicAPI.getInteractor().cancelAnimation('annotationMouseMove')
+    }
+  })
+  model.interactor.onEndMouseWheel(event => {
+    updateDataProbeSize()
+  })
+
 
   // use the same color map in the planes
   // color map changes with window / level
